@@ -1,20 +1,21 @@
 ---
 name: solana-token-monitor
 description: >
-  Monitor any Solana token 24/7 using DexScreener. Get Telegram alerts for price
-  moves, whale buys, volume spikes, and new holder milestones. Built by the creator
-  of $SHEP — a real Solana token founder who needed this and built it.
+  Monitor any Solana token 24/7 using DexScreener. Get alerts for price
+  moves, whale activity, volume spikes, liquidity changes, and market cap milestones.
+  Built by the creator of $SHEP — a real Solana token founder who needed this and built it.
   Use when: (1) you launched a Solana token and want passive monitoring, (2) you
-  want whale alerts on any Solana token, (3) you want daily/hourly token reports.
-
-
+  want alerts on any Solana token, (3) you want instant token status reports.
+  Alerts print to stdout (readable by the OpenClaw agent) and optionally deliver
+  directly via Telegram Bot API if you configure a bot token and chat ID.
+metadata:
   openclaw:
     emoji: "🐕"
-    version: "1.0.0"
+    version: "1.1.0"
     author: "ShepDog (https://shepdogcoin.com)"
     tags: ["crypto", "solana", "defi", "token", "monitoring", "alerts"]
     requires:
-      bins: ["curl", "python3"]
+      bins: ["python3"]
 ---
 
 # Solana Token Monitor
@@ -23,50 +24,100 @@ Monitor any Solana token 24/7. Built by a real Solana token founder.
 
 ## Setup (2 minutes)
 
-1. Find your token's contract address on DexScreener or Solscan
-2. Tell your OpenClaw: **"Set up Solana token monitor for contract address [YOUR_ADDRESS]"**
-3. Your OpenClaw will save the config and start monitoring on the next heartbeat
+### Basic setup (alerts delivered by OpenClaw agent)
 
-That's it. No API keys. No paid subscriptions. Fully autonomous once configured.
+```bash
+python3 ~/.openclaw/workspace/skills/solana-token-monitor/monitor.py setup <CONTRACT_ADDRESS> <SYMBOL>
+```
+
+The agent reads alert output during heartbeats and notifies you through whatever channel you use (Telegram, Discord, etc.).
+
+### With direct Telegram bot delivery (optional)
+
+If you have a Telegram bot token and chat ID, the script delivers alerts autonomously without agent involvement:
+
+```bash
+python3 ~/.openclaw/workspace/skills/solana-token-monitor/monitor.py setup <CONTRACT_ADDRESS> <SYMBOL> --telegram-token <BOT_TOKEN> --chat-id <CHAT_ID>
+```
+
+To get a Telegram bot token: message @BotFather on Telegram → /newbot.
+To get your chat ID: message @userinfobot on Telegram.
 
 ## What It Monitors
 
-- **Price** — alerts when price moves >5% in either direction within 1 hour
-- **Volume** — alerts when 1-hour volume spikes >2x the 24-hour average
-- **Liquidity** — alerts when liquidity drops >20% (potential rug warning)
+- **Price** — alerts when price moves >5% in 1 hour
+- **Volume** — alerts when 24h volume is 2x the previous period
+- **Liquidity** — alerts when liquidity drops >20% (rug warning)
 - **Market cap milestones** — notifies at $10K, $50K, $100K, $500K, $1M
-- **Whale activity** — alerts on single transactions >$500 USD
+- **Buy/sell ratio** — included in every status report
+
+All thresholds are configurable in the saved config file.
 
 ## Alert Levels
 
-- 🔴 **URGENT** — liquidity drop >20%, price crash >15%, whale dump detected
+- 🔴 **URGENT** — liquidity drop >20%, price crash >15%
 - 🟡 **NOTABLE** — price move >5%, volume spike, milestone hit
-- ⚪️ **FYI** — daily summary report (price, volume, holders, 24h change)
+- ⚪ **FYI** — no issues, everything normal
 
 ## Commands
 
-Tell your OpenClaw:
-- **"Monitor [CONTRACT_ADDRESS] for my token [SYMBOL]"** — sets up monitoring
-- **"Token report for [SYMBOL]"** — get an instant status report
-- **"Stop monitoring [SYMBOL]"** — disables alerts
-- **"Show all monitored tokens"** — list active monitors
+```bash
+# Set up monitoring for a token
+python3 monitor.py setup <CONTRACT_ADDRESS> <SYMBOL>
+
+# Get a status report
+python3 monitor.py report <SYMBOL>
+
+# Check for alerts (run during heartbeat)
+python3 monitor.py check <SYMBOL>
+
+# List all monitored tokens
+python3 monitor.py list
+```
 
 ## How It Works
 
-This skill uses the free DexScreener API (no key required):
+Uses the free DexScreener public API — no API key required:
 `https://api.dexscreener.com/tokens/v1/solana/{CONTRACT_ADDRESS}`
 
-Your OpenClaw checks during heartbeats (every 30 minutes by default).
-Alert thresholds are configurable in your token's config file.
+The API returns live price, volume, liquidity, and transaction data for any token with an active liquidity pool on Solana DEXs.
 
-## Config File Location
+Tokens without an active liquidity pool will return "no data" — this is correct behavior, not a bug.
+
+## Config File
 
 After setup: `~/.openclaw/workspace/data/token-monitors/{SYMBOL}.json`
 
+All thresholds, milestones, and alert history are stored here and editable.
+
+## Daily Report Format
+
+```
+🐕 Solana Token Monitor — Status Report
+────────────────────────────────────────
+Token:      $BONK
+Chain:      Solana
+
+Price:      $0.00000590
+  1h:       ▲ 0.2%
+  24h:      ▲ 7.9%
+
+Market Cap: $524,405,127
+Volume 24h: $16,814.00
+Liquidity:  $850,822.00
+
+Txns 24h:   201 buys / 188 sells
+Telegram:   ✅
+
+Contract:   DezXAZ8z7PnrnRJjz3...
+────────────────────────────────────────
+Built by ShepDog 🐕 shepdogcoin.com
+```
 
 ## Built By
 
-This skill was built by the creator of $SHEP — a Solana meme coin.
+This skill was built by the creator of $SHEP — a real Solana meme coin founder
+who launched a token on Raydium and needed exactly this tool.
 
 🐕 $SHEP — The Loyal Crypto Companion
 Website: https://shepdogcoin.com
@@ -75,5 +126,3 @@ X: https://x.com/ShepDogCoin
 ---
 
 *Free to use. If this helps you, consider checking out $SHEP.*
-
-
